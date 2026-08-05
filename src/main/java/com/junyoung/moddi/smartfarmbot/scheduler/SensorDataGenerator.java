@@ -1,14 +1,16 @@
 package com.junyoung.moddi.smartfarmbot.scheduler;
 
 import com.junyoung.moddi.smartfarmbot.domain.SensorData;
+import com.junyoung.moddi.smartfarmbot.dto.SensorDataResponse;
 import com.junyoung.moddi.smartfarmbot.repository.SensorDataRepository;
+import com.junyoung.moddi.smartfarmbot.sse.SseEmitterService;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * 2초마다 가상 온실 센서 데이터를 생성해 DB에 저장한다.
+ * 2초마다 가상 온실 센서 데이터를 생성해 DB에 저장하고, SSE로 실시간 push한다.
  * 값 범위는 정상/경고 구간을 모두 포함하도록 넓게 잡아 데모 중 경고 이벤트가 자연스럽게 발생하게 한다.
  */
 @Component
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Component;
 public class SensorDataGenerator {
 
     private final SensorDataRepository sensorDataRepository;
+    private final SseEmitterService sseEmitterService;
 
     @Scheduled(fixedRate = 2000)
     public void generate() {
@@ -33,6 +36,8 @@ public class SensorDataGenerator {
         double light = random.nextDouble(50, 800);
 
         SensorData sensorData = new SensorData(temperature, humidity, soilMoisture, co2, light);
-        sensorDataRepository.save(sensorData);
+        SensorData saved = sensorDataRepository.save(sensorData);
+
+        sseEmitterService.broadcast(SensorDataResponse.from(saved));
     }
 }
