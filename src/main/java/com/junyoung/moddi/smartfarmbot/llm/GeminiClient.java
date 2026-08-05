@@ -1,8 +1,10 @@
 package com.junyoung.moddi.smartfarmbot.llm;
 
+import com.junyoung.moddi.smartfarmbot.exception.LlmCommunicationException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -27,11 +29,15 @@ public class GeminiClient {
     }
 
     public JsonNode generateContent(JsonNode requestBody) {
-        return restClient.post()
-            .uri("/models/{model}:generateContent?key={apiKey}", model, apiKey)
-            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
-            .body(requestBody)
-            .retrieve()
-            .body(JsonNode.class);
+        try {
+            return restClient.post()
+                .uri("/models/{model}:generateContent?key={apiKey}", model, apiKey)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(requestBody)
+                .retrieve()
+                .body(JsonNode.class);
+        } catch (RestClientException e) {
+            throw new LlmCommunicationException("Gemini API 호출에 실패했습니다.", e);
+        }
     }
 }

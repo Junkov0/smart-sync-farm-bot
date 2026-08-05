@@ -1,6 +1,7 @@
 package com.junyoung.moddi.smartfarmbot.llm;
 
 import com.junyoung.moddi.smartfarmbot.domain.DeviceType;
+import com.junyoung.moddi.smartfarmbot.exception.UnknownDeviceCommandException;
 import com.junyoung.moddi.smartfarmbot.service.DeviceControlService;
 import com.junyoung.moddi.smartfarmbot.service.SensorAnalysisService;
 import lombok.RequiredArgsConstructor;
@@ -54,9 +55,17 @@ public class GeminiChatService {
     private String executeFunction(String name, JsonNode args) {
         return switch (name) {
             case "analyze_pattern" -> sensorAnalysisService.analyzeRecentPattern();
-            case "control_device" -> deviceControlService.controlDevice(DeviceType.valueOf(args.path("device").asString()));
+            case "control_device" -> deviceControlService.controlDevice(parseDeviceType(args.path("device").asString()));
             default -> "알 수 없는 함수 호출입니다: " + name;
         };
+    }
+
+    private DeviceType parseDeviceType(String value) {
+        try {
+            return DeviceType.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            throw new UnknownDeviceCommandException(value);
+        }
     }
 
     private JsonNode buildRequest(ArrayNode contents) {

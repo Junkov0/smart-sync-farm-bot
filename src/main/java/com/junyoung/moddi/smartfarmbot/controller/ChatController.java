@@ -3,6 +3,7 @@ package com.junyoung.moddi.smartfarmbot.controller;
 import com.junyoung.moddi.smartfarmbot.dto.ChatRequest;
 import com.junyoung.moddi.smartfarmbot.dto.ChatResponse;
 import com.junyoung.moddi.smartfarmbot.llm.GeminiChatService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,7 +18,7 @@ public class ChatController {
     private final GeminiChatService geminiChatService;
 
     @PostMapping
-    public ChatResponse chat(@RequestBody ChatRequest request) {
+    public ChatResponse chat(@Valid @RequestBody ChatRequest request) {
         return new ChatResponse(geminiChatService.chat(request.message()));
     }
 }
