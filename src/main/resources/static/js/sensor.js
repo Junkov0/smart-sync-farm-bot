@@ -12,28 +12,90 @@ const statEls = {
   light: document.getElementById("stat-light"),
 };
 
+// 5개 센서를 구분하는 카테고리 색상 (dataviz 팔레트, 다크 서피스 기준 검증됨)
+const SERIES_COLORS = {
+  온도: "#3987e5",
+  습도: "#d95926",
+  토양수분: "#199e70",
+  CO2: "#c98500",
+  조도: "#d55181",
+};
+
+function withOpacity(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function makeDataset(label) {
+  const color = SERIES_COLORS[label];
+  return {
+    label,
+    data: [],
+    borderColor: color,
+    backgroundColor: withOpacity(color, 0.1),
+    borderWidth: 2,
+    borderCapStyle: "round",
+    borderJoinStyle: "round",
+    tension: 0.35,
+    fill: false,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    pointHoverBackgroundColor: color,
+    pointHoverBorderColor: "#12161b",
+    pointHoverBorderWidth: 2,
+  };
+}
+
 const chart = new Chart(document.getElementById("sensor-chart"), {
   type: "line",
   data: {
     labels: [],
-    datasets: [
-      { label: "온도", data: [], borderColor: "#ff6b6b", tension: 0.3 },
-      { label: "습도", data: [], borderColor: "#4dabf7", tension: 0.3 },
-      { label: "토양수분", data: [], borderColor: "#a9723d", tension: 0.3 },
-      { label: "CO2", data: [], borderColor: "#94d82d", tension: 0.3 },
-      { label: "조도", data: [], borderColor: "#ffd43b", tension: 0.3 },
-    ],
+    datasets: ["온도", "습도", "토양수분", "CO2", "조도"].map(makeDataset),
   },
   options: {
     responsive: true,
     maintainAspectRatio: false,
     animation: false,
+    interaction: { mode: "nearest", intersect: false },
+    layout: { padding: { top: 4 } },
     scales: {
-      x: { ticks: { color: "#9aa4af" } },
-      y: { ticks: { color: "#9aa4af" } },
+      x: {
+        grid: { display: false },
+        border: { display: false },
+        ticks: { color: "#898781", font: { size: 11 }, maxRotation: 0 },
+      },
+      y: {
+        grid: { color: "#2c2c2a" },
+        border: { display: false },
+        ticks: { color: "#898781", font: { size: 11 } },
+      },
     },
     plugins: {
-      legend: { labels: { color: "#e6e8eb" } },
+      legend: {
+        position: "top",
+        align: "start",
+        labels: {
+          color: "#c3c2b7",
+          font: { size: 13 },
+          usePointStyle: true,
+          pointStyle: "circle",
+          boxWidth: 8,
+          boxHeight: 8,
+          padding: 16,
+        },
+      },
+      tooltip: {
+        backgroundColor: "#22282f",
+        titleColor: "#e6e8eb",
+        bodyColor: "#e6e8eb",
+        borderColor: "#383835",
+        borderWidth: 1,
+        padding: 10,
+        boxPadding: 4,
+        usePointStyle: true,
+      },
     },
   },
 });
