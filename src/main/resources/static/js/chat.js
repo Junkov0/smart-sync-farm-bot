@@ -4,10 +4,55 @@ const messagesEl = document.getElementById("chat-messages");
 const formEl = document.getElementById("chat-form");
 const inputEl = document.getElementById("chat-input");
 
+function escapeHtml(text) {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// 봇 응답에 섞여 오는 가벼운 마크다운(**볼드**, "- 목록")만 안전하게 HTML로 변환한다.
+// 먼저 전체를 escape한 뒤 우리가 만든 태그만 다시 심으므로 응답 텍스트가 임의 HTML/스크립트로
+// 해석되지 않는다.
+function renderMarkdownLite(text) {
+  const escaped = escapeHtml(text);
+  const bolded = escaped.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+
+  let html = "";
+  let inList = false;
+
+  for (const rawLine of bolded.split("\n")) {
+    const line = rawLine.trim();
+    const isListItem = line.startsWith("- ") || line.startsWith("* ");
+
+    if (isListItem) {
+      if (!inList) {
+        html += "<ul>";
+        inList = true;
+      }
+      html += `<li>${line.slice(2)}</li>`;
+      continue;
+    }
+
+    if (inList) {
+      html += "</ul>";
+      inList = false;
+    }
+    if (line) {
+      html += `<p>${line}</p>`;
+    }
+  }
+  if (inList) {
+    html += "</ul>";
+  }
+  return html;
+}
+
 function appendMessage(role, text) {
   const bubble = document.createElement("div");
   bubble.className = `chat-message ${role}`;
-  bubble.textContent = text;
+  if (role === "bot") {
+    bubble.innerHTML = renderMarkdownLite(text);
+  } else {
+    bubble.textContent = text;
+  }
   messagesEl.appendChild(bubble);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }

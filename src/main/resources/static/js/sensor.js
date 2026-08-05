@@ -8,6 +8,8 @@ const MAX_POINTS = 30; // 차트에 표시할 최근 데이터 개수
 Chart.defaults.font.family = "'Pretendard', 'Malgun Gothic', sans-serif";
 
 const stage = document.getElementById("stage");
+const alertChipsEl = document.getElementById("alert-chips");
+const toastContainerEl = document.getElementById("toast-container");
 
 const statEls = {
   temperature: document.getElementById("stat-temperature"),
@@ -16,6 +18,84 @@ const statEls = {
   co2: document.getElementById("stat-co2"),
   light: document.getElementById("stat-light"),
 };
+
+// 색/애니메이션만으로는 "지금 무슨 이벤트가 발생했는지" 알기 어렵다는 피드백에 따라
+// 이벤트마다 아이콘 + 이름 + 해결 명령을 명시한다.
+const EVENT_META = {
+  temperatureWarning: {
+    icon: "🔥",
+    label: "온실 과열",
+    detail: (d) => `${d.temperature.toFixed(1)}도 (35도 이상) · "환풍기 켜줘"로 해결`,
+  },
+  soilMoistureWarning: {
+    icon: "🌵",
+    label: "토양수분 부족",
+    detail: (d) => `${d.soilMoisture.toFixed(1)}% (30% 이하) · "스프링클러 켜줘"로 해결`,
+  },
+  humidityWarning: {
+    icon: "💧",
+    label: "내부 과습",
+    detail: (d) => `${d.humidity.toFixed(1)}% (85% 이상) · "제습기 켜줘"로 해결`,
+  },
+  lightWarning: {
+    icon: "🌑",
+    label: "일조량 부족",
+    detail: (d) => `${d.light.toFixed(0)}lux (200lux 미만) · "보광등 켜줘"로 해결`,
+  },
+  co2Warning: {
+    icon: "🫧",
+    label: "CO2 부족",
+    detail: (d) => `${d.co2.toFixed(0)}ppm (350ppm 미만) · "탄산가스 켜줘"로 해결`,
+  },
+};
+
+// 직전 tick의 경고 상태 - 값이 바뀌는 순간(발생/해소)에만 토스트를 띄우기 위해 기억해둔다
+let previousWarnings = {};
+
+function showToast(kind, meta) {
+  const toast = document.createElement("div");
+  toast.className = `toast ${kind === "resolved" ? "resolved" : ""}`;
+  toast.innerHTML = `
+    <span class="icon">${kind === "resolved" ? "✅" : meta.icon}</span>
+    <span>
+      <span class="title">${meta.label} ${kind === "resolved" ? "정상화" : "발생"}</span>
+    </span>
+  `;
+  toastContainerEl.appendChild(toast);
+
+  requestAnimationFrame(() => toast.classList.add("show"));
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
+function updateAlerts(data) {
+  const currentWarnings = {};
+  for (const key of Object.keys(EVENT_META)) {
+    currentWarnings[key] = Boolean(data[key]);
+  }
+
+  for (const key of Object.keys(EVENT_META)) {
+    const was = previousWarnings[key] ?? false;
+    const now = currentWarnings[key];
+    if (now && !was) {
+      showToast("warning", EVENT_META[key]);
+    } else if (!now && was) {
+      showToast("resolved", EVENT_META[key]);
+    }
+  }
+  previousWarnings = currentWarnings;
+
+  alertChipsEl.innerHTML = Object.keys(EVENT_META)
+    .filter((key) => currentWarnings[key])
+    .map((key) => {
+      const meta = EVENT_META[key];
+      return `<div class="alert-chip"><span class="icon">${meta.icon}</span><span>${meta.label} · ${meta.detail(data)}</span></div>`;
+    })
+    .join("");
+}
 
 // 5개 센서를 구분하는 카테고리 색상 (dataviz 팔레트, 다크 서피스 기준 검증됨)
 const SERIES_COLORS = {
@@ -154,5 +234,6 @@ eventSource.addEventListener("sensor-data", (event) => {
   const data = JSON.parse(event.data);
   updateStats(data);
   updateStageEffects(data);
+  updateAlerts(data);
   updateChart(data);
 });
