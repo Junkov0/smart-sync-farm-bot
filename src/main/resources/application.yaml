@@ -25,5 +25,5 @@ spring:
 
 gemini:
   api-key: ${GEMINI_API_KEY}
-  model: gemini-flash-latest
+  model: gemini-flash-lite-latest
   base-url: https://generativelanguage.googleapis.com/v1beta
