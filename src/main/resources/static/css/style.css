@@ -1,0 +1,406 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Pretendard", "Malgun Gothic", sans-serif;
+  background: #12161b;
+  color: #e6e8eb;
+  font-size: 15px;
+  line-height: 1.5;
+  /* 한글은 음절 단위로 아무데서나 줄바꿈되면 단어가 잘린 것처럼 보이므로
+     띄어쓰기(단어) 단위로만 줄바꿈되게 한다. 한 단어가 컨테이너보다 길 때만
+     overflow-wrap이 강제로 끊어준다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(320px, 1fr) minmax(280px, 320px);
+  gap: 16px;
+  height: 100vh;
+  padding: 16px;
+}
+
+.panel {
+  background: #1a1f26;
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 뷰포트가 좁아지면 3단 그리드가 깨지는 대신 세로로 쌓이는 레이아웃으로 전환 */
+@media (max-width: 1000px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(320px, 50vh) auto;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .stage-wrap {
+    order: -1;
+  }
+}
+
+h1 {
+  font-size: 18px;
+  margin: 0 0 14px;
+}
+
+/* ---------- 좌측 대시보드 ---------- */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.stat-tile {
+  background: #22282f;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stat-label {
+  font-size: 13px;
+  line-height: 1.3;
+  color: #9aa4af;
+}
+
+.stat-value {
+  font-size: 24px;
+  line-height: 1.3;
+  font-weight: 600;
+  font-variant-numeric: proportional-nums;
+  transition: color 0.3s;
+}
+
+/* CO2 부족 경고: 폰트 색상 변경 */
+.stat-value.warning {
+  color: #e66767;
+}
+
+#sensor-chart {
+  flex: 1;
+  min-height: 260px;
+}
+
+/* ---------- 중앙 온실 영상 스테이지 ---------- */
+
+.stage-wrap {
+  padding: 0;
+  background: #000;
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #1e3a24; /* 영상 로딩 전 기본 배경(온실 느낌) */
+  overflow: hidden;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 레이어 쌓임 순서: 정상영상(0) < 마른영상(1) < 안개(2) < 디밍(3) < 테두리(4)
+   video는 브라우저에 따라 자체 컴포지팅 레이어로 그려져 DOM 순서만으론 위아래가
+   보장되지 않는 경우가 있어 z-index를 명시한다. */
+#normal-video { z-index: 0; }
+#dry-video { z-index: 1; }
+#fog-layer { z-index: 2; }
+#dim-layer { z-index: 3; }
+.border-alert { z-index: 4; }
+
+/* 마른 상태 영상: 평소엔 숨겨져 있다가 토양수분 부족 시 서서히 opacity 상승 */
+.dry-video {
+  opacity: 0;
+  transition: opacity 2.5s ease-in-out;
+}
+
+.stage.warning-soil .dry-video {
+  opacity: 1;
+}
+
+/* 내부 과습: 하얀 반투명 안개 */
+.fog-layer {
+  background: rgba(255, 255, 255, 0.55);
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out;
+  pointer-events: none;
+}
+
+.stage.warning-humidity .fog-layer {
+  opacity: 1;
+}
+
+/* 일조량 부족: 화면 전체 디밍 */
+.dim-layer {
+  background: #000;
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out;
+  pointer-events: none;
+}
+
+.stage.warning-light .dim-layer {
+  opacity: 0.55;
+}
+
+/* 온실 과열: 테두리 붉은색 점멸 */
+.border-alert {
+  position: absolute;
+  inset: 0;
+  border: 8px solid transparent;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.stage.warning-temp .border-alert {
+  animation: border-blink 1s infinite;
+}
+
+@keyframes border-blink {
+  0%, 100% { border-color: rgba(255, 0, 0, 0.9); }
+  50% { border-color: rgba(255, 0, 0, 0.1); }
+}
+
+/* ---------- 이벤트 알림 (벨 + 클릭 시 열리는 패널) ----------
+   화면에 알림이 계속 떠 있으면 정신없다는 피드백에 따라, 평소엔 벨 아이콘에
+   개수 배지만 보이고 눌러야 목록이 열리는 방식으로 바꿨다. */
+.alert-bell {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid #383835;
+  background: #22282f;
+  color: #e6e8eb;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.alert-bell.ring {
+  animation: bell-ring 0.6s ease;
+}
+
+@keyframes bell-ring {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-15deg); }
+  40% { transform: rotate(12deg); }
+  60% { transform: rotate(-8deg); }
+  80% { transform: rotate(4deg); }
+}
+
+.alert-bell-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #d03b3b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.alert-panel {
+  position: fixed;
+  top: 68px;
+  right: 16px;
+  z-index: 9998;
+  width: 300px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: #1a1f26;
+  border: 1px solid #383835;
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.alert-panel[hidden] {
+  display: none;
+}
+
+.alert-panel .empty {
+  color: #898781;
+  font-size: 13px;
+  text-align: center;
+  padding: 16px 4px;
+}
+
+.alert-panel-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: #22282f;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.alert-panel-item .icon {
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.alert-panel-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.alert-panel-item .label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.alert-panel-item .detail {
+  display: block;
+  font-size: 12px;
+  color: #9aa4af;
+  margin-top: 2px;
+}
+
+.alert-panel-action {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  background: #2f6f4f;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.alert-panel-action:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---------- 우측 챗봇 ---------- */
+
+.chat {
+  flex: 1;
+}
+
+.chat-messages {
+  flex: 1;
+  min-height: 0; /* flex 컬럼 안에서 내용이 넘칠 때 부모 밖으로 밀어내지 않고 자체 스크롤되게 */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.chat-message {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.chat-message.bot {
+  align-self: flex-start;
+  background: #22282f;
+}
+
+.chat-message.user {
+  align-self: flex-end;
+  background: #2f6f4f;
+}
+
+/* 봇 메시지는 간단한 마크다운(**볼드**, - 목록)을 HTML로 변환해 렌더링한다 */
+.chat-message p {
+  margin: 0 0 8px;
+}
+
+.chat-message p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-message ul {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.chat-message ul:last-child {
+  margin-bottom: 0;
+}
+
+.chat-message li {
+  margin-bottom: 4px;
+}
+
+.chat-message strong {
+  font-weight: 700;
+}
+
+.chat-form {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-form input {
+  flex: 1;
+  min-width: 0; /* flex 아이템 기본 min-width:auto 때문에 버튼이 밀려나 두 줄로 접히던 문제 방지 */
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #12161b;
+  color: #e6e8eb;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.chat-form input::placeholder {
+  color: #7a8189;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-form button {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  background: #2f6f4f;
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart-Sync Farm Bot</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app">
+
+    <!-- 좌측: 실시간 대시보드 -->
+    <section class="panel dashboard">
+      <h1>온실 대시보드</h1>
+
+      <div class="stat-grid">
+        <div class="stat-tile">
+          <span class="stat-label">온도</span>
+          <span id="stat-temperature" class="stat-value">-</span>
+        </div>
+        <div class="stat-tile">
+          <span class="stat-label">습도</span>
+          <span id="stat-humidity" class="stat-value">-</span>
+        </div>
+        <div class="stat-tile">
+          <span class="stat-label">토양수분</span>
+          <span id="stat-soilMoisture" class="stat-value">-</span>
+        </div>
+        <!-- CO2 부족 경고 시 폰트 색상만 바뀌면 되므로 stat-value에 warning 클래스 토글 -->
+        <div class="stat-tile">
+          <span class="stat-label">CO2</span>
+          <span id="stat-co2" class="stat-value">-</span>
+        </div>
+        <div class="stat-tile">
+          <span class="stat-label">조도</span>
+          <span id="stat-light" class="stat-value">-</span>
+        </div>
+      </div>
+
+      <canvas id="sensor-chart"></canvas>
+    </section>
+
+    <!-- 중앙: 온실 영상 + 이벤트 시각 효과 -->
+    <section class="panel stage-wrap">
+      <div id="stage" class="stage">
+        <video id="normal-video" class="layer" src="/videos/normal.mp4" autoplay muted loop playsinline></video>
+        <video id="dry-video" class="layer dry-video" src="/videos/dry.mp4" autoplay muted loop playsinline></video>
+        <div id="fog-layer" class="layer fog-layer"></div>
+        <div id="dim-layer" class="layer dim-layer"></div>
+        <div id="border-alert" class="border-alert"></div>
+      </div>
+    </section>
+
+    <!-- 우측: AI 챗봇 -->
+    <section class="panel chat">
+      <h1>AI 모니터링 봇</h1>
+      <div id="chat-messages" class="chat-messages"></div>
+      <form id="chat-form" class="chat-form">
+        <input id="chat-input" type="text" placeholder="예) 환풍기 켜줘 / 현재 패턴 분석해 줘" autocomplete="off">
+        <button type="submit">전송</button>
+      </form>
+    </section>
+
+  </div>
+
+  <!-- 이벤트 알림: 화면에 계속 떠 있지 않고, 벨을 눌러야 확인하는 방식 -->
+  <button id="alert-bell" class="alert-bell" type="button" aria-label="이벤트 알림 열기">
+    🔔
+    <span id="alert-bell-badge" class="alert-bell-badge" hidden>0</span>
+  </button>
+  <div id="alert-panel" class="alert-panel" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="/js/sensor.js"></script>
+  <script src="/js/chat.js"></script>
+</body>
+</html>
