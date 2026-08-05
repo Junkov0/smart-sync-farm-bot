@@ -2,6 +2,11 @@
 
 const MAX_POINTS = 30; // 차트에 표시할 최근 데이터 개수
 
+// Chart.js는 canvas에 직접 텍스트를 그리므로 CSS font-family를 상속받지 않는다.
+// 기본값(Helvetica/Arial)에는 한글 글리프가 없어 브라우저가 저품질 폴백 폰트로 그려
+// legend/축 라벨만 화면의 다른 텍스트보다 눌리고 흐릿하게 보였다. 명시적으로 지정한다.
+Chart.defaults.font.family = "'Pretendard', 'Malgun Gothic', sans-serif";
+
 const stage = document.getElementById("stage");
 
 const statEls = {
@@ -64,12 +69,12 @@ const chart = new Chart(document.getElementById("sensor-chart"), {
       x: {
         grid: { display: false },
         border: { display: false },
-        ticks: { color: "#898781", font: { size: 11 }, maxRotation: 0 },
+        ticks: { color: "#898781", font: { size: 12, family: "'Pretendard', 'Malgun Gothic', sans-serif" }, maxRotation: 0 },
       },
       y: {
         grid: { color: "#2c2c2a" },
         border: { display: false },
-        ticks: { color: "#898781", font: { size: 11 } },
+        ticks: { color: "#898781", font: { size: 12, family: "'Pretendard', 'Malgun Gothic', sans-serif" } },
       },
     },
     plugins: {
@@ -78,18 +83,21 @@ const chart = new Chart(document.getElementById("sensor-chart"), {
         align: "start",
         labels: {
           color: "#c3c2b7",
-          font: { size: 13 },
+          font: { size: 13, family: "'Pretendard', 'Malgun Gothic', sans-serif" },
           usePointStyle: true,
           pointStyle: "circle",
           boxWidth: 8,
           boxHeight: 8,
-          padding: 16,
+          padding: 14,
+          textAlign: "left",
         },
       },
       tooltip: {
         backgroundColor: "#22282f",
         titleColor: "#e6e8eb",
         bodyColor: "#e6e8eb",
+        titleFont: { family: "'Pretendard', 'Malgun Gothic', sans-serif" },
+        bodyFont: { family: "'Pretendard', 'Malgun Gothic', sans-serif" },
         borderColor: "#383835",
         borderWidth: 1,
         padding: 10,
@@ -99,6 +107,10 @@ const chart = new Chart(document.getElementById("sensor-chart"), {
     },
   },
 });
+
+// canvas 텍스트는 웹폰트 로드 완료 시점에 자동으로 다시 그려지지 않으므로
+// Pretendard 로딩이 첫 렌더보다 늦게 끝나면 폴백 폰트로 남을 수 있다 - 로드 완료 후 한 번 갱신
+document.fonts.ready.then(() => chart.update());
 
 function updateStats(data) {
   statEls.temperature.textContent = `${data.temperature.toFixed(1)}도`;
