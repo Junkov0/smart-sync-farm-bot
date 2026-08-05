@@ -1,3 +1,8 @@
+server:
+  # Elastic Beanstalk(Java SE 플랫폼)은 PORT 환경변수로 리스닝 포트를 지정한다.
+  # 로컬 개발 시 PORT 미설정이면 기존처럼 8080 사용.
+  port: ${PORT:8080}
+
 spring:
   config:
     import: "optional:file:.env[.properties]"
