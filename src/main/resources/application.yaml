@@ -1,3 +1,9 @@
+server:
+  # EB의 nginx는 5000 포트로 고정 프록시하며, PORT 환경변수를 앱 프로세스에 자동으로
+  # 주입해주지는 않는다. 실제 포트는 Procfile에서 --server.port=5000으로 강제 지정하고,
+  # 여기 기본값은 로컬 개발용(PORT 미설정 시 8080)으로만 쓰인다.
+  port: ${PORT:8080}
+
 spring:
   config:
     import: "optional:file:.env[.properties]"
