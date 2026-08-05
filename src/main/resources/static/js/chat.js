@@ -67,16 +67,8 @@ appendMessage(
   ].join("\n\n")
 );
 
-formEl.addEventListener("submit", async (event) => {
-  event.preventDefault();
-
-  const message = inputEl.value.trim();
-  if (!message) {
-    return;
-  }
-
+async function sendMessage(message) {
   appendMessage("user", message);
-  inputEl.value = "";
 
   try {
     const response = await fetch("/api/chat", {
@@ -89,4 +81,19 @@ formEl.addEventListener("submit", async (event) => {
   } catch (error) {
     appendMessage("bot", "응답을 받아오지 못했습니다. 잠시 후 다시 시도해주세요.");
   }
+}
+
+formEl.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const message = inputEl.value.trim();
+  if (!message) {
+    return;
+  }
+
+  inputEl.value = "";
+  sendMessage(message);
 });
+
+// 알림 패널의 "정상화" 버튼처럼, 채팅 입력 없이도 같은 파이프라인으로 명령을 보낼 수 있게 노출
+window.sendChatCommand = sendMessage;

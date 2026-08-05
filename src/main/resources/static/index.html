@@ -49,8 +49,6 @@
         <div id="fog-layer" class="layer fog-layer"></div>
         <div id="dim-layer" class="layer dim-layer"></div>
         <div id="border-alert" class="border-alert"></div>
-        <!-- 현재 어떤 이상 이벤트가 활성 상태인지 이름으로 알려주는 배지 -->
-        <div id="alert-chips" class="alert-chips"></div>
       </div>
     </section>
 
@@ -66,8 +64,12 @@
 
   </div>
 
-  <!-- 이벤트가 새로 발생/해소될 때 잠깐 떴다 사라지는 알림 -->
-  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+  <!-- 이벤트 알림: 화면에 계속 떠 있지 않고, 벨을 눌러야 확인하는 방식 -->
+  <button id="alert-bell" class="alert-bell" type="button" aria-label="이벤트 알림 열기">
+    🔔
+    <span id="alert-bell-badge" class="alert-bell-badge" hidden>0</span>
+  </button>
+  <div id="alert-panel" class="alert-panel" hidden></div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script src="/js/sensor.js"></script>

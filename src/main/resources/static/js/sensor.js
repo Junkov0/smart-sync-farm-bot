@@ -8,8 +8,9 @@ const MAX_POINTS = 30; // 차트에 표시할 최근 데이터 개수
 Chart.defaults.font.family = "'Pretendard', 'Malgun Gothic', sans-serif";
 
 const stage = document.getElementById("stage");
-const alertChipsEl = document.getElementById("alert-chips");
-const toastContainerEl = document.getElementById("toast-container");
+const bellEl = document.getElementById("alert-bell");
+const bellBadgeEl = document.getElementById("alert-bell-badge");
+const alertPanelEl = document.getElementById("alert-panel");
 
 const statEls = {
   temperature: document.getElementById("stat-temperature"),
@@ -20,82 +21,124 @@ const statEls = {
 };
 
 // 색/애니메이션만으로는 "지금 무슨 이벤트가 발생했는지" 알기 어렵다는 피드백에 따라
-// 이벤트마다 아이콘 + 이름 + 해결 명령을 명시한다.
+// 이벤트마다 아이콘 + 이름 + 해결 명령을 명시하고, 알림 패널에서 바로 명령을 보낼 수 있게 한다.
 const EVENT_META = {
   temperatureWarning: {
     icon: "🔥",
     label: "온실 과열",
-    detail: (d) => `${d.temperature.toFixed(1)}도 (35도 이상) · "환풍기 켜줘"로 해결`,
+    command: "환풍기 켜줘",
+    detail: (d) => `${d.temperature.toFixed(1)}도 (35도 이상)`,
   },
   soilMoistureWarning: {
     icon: "🌵",
     label: "토양수분 부족",
-    detail: (d) => `${d.soilMoisture.toFixed(1)}% (30% 이하) · "스프링클러 켜줘"로 해결`,
+    command: "스프링클러 켜줘",
+    detail: (d) => `${d.soilMoisture.toFixed(1)}% (30% 이하)`,
   },
   humidityWarning: {
     icon: "💧",
     label: "내부 과습",
-    detail: (d) => `${d.humidity.toFixed(1)}% (85% 이상) · "제습기 켜줘"로 해결`,
+    command: "제습기 켜줘",
+    detail: (d) => `${d.humidity.toFixed(1)}% (85% 이상)`,
   },
   lightWarning: {
     icon: "🌑",
     label: "일조량 부족",
-    detail: (d) => `${d.light.toFixed(0)}lux (200lux 미만) · "보광등 켜줘"로 해결`,
+    command: "보광등 켜줘",
+    detail: (d) => `${d.light.toFixed(0)}lux (200lux 미만)`,
   },
   co2Warning: {
     icon: "🫧",
     label: "CO2 부족",
-    detail: (d) => `${d.co2.toFixed(0)}ppm (350ppm 미만) · "탄산가스 켜줘"로 해결`,
+    command: "탄산가스 켜줘",
+    detail: (d) => `${d.co2.toFixed(0)}ppm (350ppm 미만)`,
   },
 };
 
-// 직전 tick의 경고 상태 - 값이 바뀌는 순간(발생/해소)에만 토스트를 띄우기 위해 기억해둔다
+// 직전 tick의 경고 상태 - 새로 시작된 경고에만 벨을 흔들기 위해 기억해둔다
 let previousWarnings = {};
+let latestSensorData = null;
 
-function showToast(kind, meta) {
-  const toast = document.createElement("div");
-  toast.className = `toast ${kind === "resolved" ? "resolved" : ""}`;
-  toast.innerHTML = `
-    <span class="icon">${kind === "resolved" ? "✅" : meta.icon}</span>
-    <span>
-      <span class="title">${meta.label} ${kind === "resolved" ? "정상화" : "발생"}</span>
-    </span>
-  `;
-  toastContainerEl.appendChild(toast);
+// 패널을 열어둔 동안에는 목록이 갱신돼도 매번 다시 렌더링해 최신 상태를 보여준다
+function renderAlertPanel() {
+  const activeKeys = Object.keys(EVENT_META).filter((key) => previousWarnings[key]);
 
-  requestAnimationFrame(() => toast.classList.add("show"));
+  if (activeKeys.length === 0) {
+    alertPanelEl.innerHTML = '<div class="empty">현재 활성화된 이벤트가 없습니다.</div>';
+    return;
+  }
 
-  setTimeout(() => {
-    toast.classList.remove("show");
-    setTimeout(() => toast.remove(), 300);
-  }, 4000);
+  alertPanelEl.innerHTML = activeKeys
+    .map((key) => {
+      const meta = EVENT_META[key];
+      return `
+        <div class="alert-panel-item">
+          <span class="icon">${meta.icon}</span>
+          <span class="alert-panel-item-body">
+            <span class="label">${meta.label}</span>
+            <span class="detail">${meta.detail(latestSensorData)}</span>
+          </span>
+          <button type="button" class="alert-panel-action" data-command="${meta.command}">정상화</button>
+        </div>
+      `;
+    })
+    .join("");
 }
 
+// 버튼을 누르면 직접 타이핑하지 않아도 같은 명령을 챗봇에 대신 보내준다
+alertPanelEl.addEventListener("click", (event) => {
+  const button = event.target.closest(".alert-panel-action");
+  if (!button || typeof window.sendChatCommand !== "function") {
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "요청 중…";
+  window.sendChatCommand(button.dataset.command);
+});
+
 function updateAlerts(data) {
+  latestSensorData = data;
+
   const currentWarnings = {};
   for (const key of Object.keys(EVENT_META)) {
     currentWarnings[key] = Boolean(data[key]);
   }
 
+  const activeCount = Object.values(currentWarnings).filter(Boolean).length;
+  let hasNewWarning = false;
   for (const key of Object.keys(EVENT_META)) {
-    const was = previousWarnings[key] ?? false;
-    const now = currentWarnings[key];
-    if (now && !was) {
-      showToast("warning", EVENT_META[key]);
-    } else if (!now && was) {
-      showToast("resolved", EVENT_META[key]);
+    if (currentWarnings[key] && !(previousWarnings[key] ?? false)) {
+      hasNewWarning = true;
     }
   }
   previousWarnings = currentWarnings;
 
-  alertChipsEl.innerHTML = Object.keys(EVENT_META)
-    .filter((key) => currentWarnings[key])
-    .map((key) => {
-      const meta = EVENT_META[key];
-      return `<div class="alert-chip"><span class="icon">${meta.icon}</span><span>${meta.label} · ${meta.detail(data)}</span></div>`;
-    })
-    .join("");
+  // 배지 개수만 갱신 - 화면에 계속 뭔가 뜨는 대신 벨을 눌러야 목록이 보인다
+  if (activeCount > 0) {
+    bellBadgeEl.hidden = false;
+    bellBadgeEl.textContent = String(activeCount);
+  } else {
+    bellBadgeEl.hidden = true;
+  }
+
+  // 새 이벤트가 시작된 순간만 벨을 살짝 흔들어 존재를 알린다 (모달/토스트 없이)
+  if (hasNewWarning) {
+    bellEl.classList.remove("ring");
+    void bellEl.offsetWidth; // 애니메이션 재시작을 위해 강제로 리플로우
+    bellEl.classList.add("ring");
+  }
+
+  if (!alertPanelEl.hidden) {
+    renderAlertPanel();
+  }
 }
+
+bellEl.addEventListener("click", () => {
+  alertPanelEl.hidden = !alertPanelEl.hidden;
+  if (!alertPanelEl.hidden) {
+    renderAlertPanel();
+  }
+});
 
 // 5개 센서를 구분하는 카테고리 색상 (dataviz 팔레트, 다크 서피스 기준 검증됨)
 const SERIES_COLORS = {
