@@ -11,7 +11,7 @@ if [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
 fi
 
 dnf install -y python3-pip
-python3 -m pip install --upgrade pip
+# rpm으로 설치된 pip 자체를 업그레이드하려 하면 RECORD 파일이 없어 실패하므로 건드리지 않는다.
 python3 -m pip install certbot certbot-nginx
 
 # --nginx: http-01 챌린지를 nginx가 임시로 처리하게만 하고, --nginx-server-root의 설정 파일은
