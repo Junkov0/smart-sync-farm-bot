@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: "optional:file:.env[.properties]"
   application:
     name: smart-farm-bot
   datasource:
@@ -14,3 +16,8 @@ spring:
     console:
       enabled: true
       path: /h2-console
+
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  model: gemini-flash-latest
+  base-url: https://generativelanguage.googleapis.com/v1beta
