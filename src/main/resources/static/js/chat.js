@@ -12,10 +12,14 @@ function appendMessage(role, text) {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-// 봇 초기 인사
+// 봇 초기 인사 (문단 단위로 줄바꿈, 실제 줄바꿈은 CSS word-break: keep-all이 단어 단위로 처리)
 appendMessage(
   "bot",
-  "안녕하세요! 최준영입니다. 스마트팜 통합 솔루션 아키텍처를 참고해 실시간 데이터 처리 역량을 보여드리기 위해 만든 AI 모니터링 시스템입니다. 궁금한 점이나 제어하고 싶은 장치가 있으면 말씀해주세요!"
+  [
+    "안녕하세요! 최준영입니다.",
+    "스마트팜 통합 솔루션 아키텍처를 참고해 실시간 데이터 처리 역량을 보여드리기 위해 만든 AI 모니터링 시스템입니다.",
+    "궁금한 점이나 제어하고 싶은 장치가 있으면 말씀해주세요!",
+  ].join("\n\n")
 );
 
 formEl.addEventListener("submit", async (event) => {

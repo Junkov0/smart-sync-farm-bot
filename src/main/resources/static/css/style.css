@@ -9,11 +9,16 @@ body {
   color: #e6e8eb;
   font-size: 15px;
   line-height: 1.5;
+  /* 한글은 음절 단위로 아무데서나 줄바꿈되면 단어가 잘린 것처럼 보이므로
+     띄어쓰기(단어) 단위로만 줄바꿈되게 한다. 한 단어가 컨테이너보다 길 때만
+     overflow-wrap이 강제로 끊어준다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .app {
   display: grid;
-  grid-template-columns: 320px 1fr 320px;
+  grid-template-columns: minmax(260px, 320px) minmax(320px, 1fr) minmax(280px, 320px);
   gap: 16px;
   height: 100vh;
   padding: 16px;
@@ -23,9 +28,25 @@ body {
   background: #1a1f26;
   border-radius: 12px;
   padding: 16px;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+/* 뷰포트가 좁아지면 3단 그리드가 깨지는 대신 세로로 쌓이는 레이아웃으로 전환 */
+@media (max-width: 1000px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(320px, 50vh) auto;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .stage-wrap {
+    order: -1;
+  }
 }
 
 h1 {
@@ -55,7 +76,6 @@ h1 {
   font-size: 13px;
   line-height: 1.3;
   color: #9aa4af;
-  letter-spacing: 0.02em;
 }
 
 .stat-value {
@@ -168,6 +188,7 @@ h1 {
 
 .chat-messages {
   flex: 1;
+  min-height: 0; /* flex 컬럼 안에서 내용이 넘칠 때 부모 밖으로 밀어내지 않고 자체 스크롤되게 */
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -180,7 +201,7 @@ h1 {
   padding: 10px 14px;
   border-radius: 10px;
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 
@@ -201,17 +222,27 @@ h1 {
 
 .chat-form input {
   flex: 1;
+  min-width: 0; /* flex 아이템 기본 min-width:auto 때문에 버튼이 밀려나 두 줄로 접히던 문제 방지 */
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid #333;
   background: #12161b;
   color: #e6e8eb;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 14px;
+}
+
+.chat-form input::placeholder {
+  color: #7a8189;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-form button {
-  padding: 10px 16px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 10px 18px;
   border-radius: 8px;
   border: none;
   background: #2f6f4f;
